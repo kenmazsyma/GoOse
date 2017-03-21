@@ -1,14 +1,16 @@
 package goose
 
 import (
+	"github.com/kenmazsyma/goquery"
+	//"github.com/rogpeppe/go-charset/charset"
+	"bufio"
+	"golang.org/x/text/encoding/japanese"
+	"golang.org/x/text/transform"
 	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
 	"time"
-
-	"github.com/advancedlogic/goquery"
-	"github.com/rogpeppe/go-charset/charset"
 )
 
 // Crawler can fetch the target HTML page
@@ -64,8 +66,36 @@ func (c Crawler) Crawl() (*Article, error) {
 		if strings.HasPrefix(attr, "text/html;charset=") {
 			cs := strings.TrimPrefix(attr, "text/html;charset=")
 			cs = strings.ToLower(cs)
+			if cs == "euc-jp" {
+				inStream := strings.NewReader(c.RawHTML)
+				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.EUCJP.NewDecoder()))
+				list := make([]string, 0)
+				for scanner.Scan() {
+					list = append(list, scanner.Text())
+				}
+				if err := scanner.Err(); err != nil {
+					return nil, err
+				}
+				c.RawHTML = strings.Join(list, "")
+				reader = strings.NewReader(c.RawHTML)
+				document, err = goquery.NewDocumentFromReader(reader)
+			}
+			if cs == "shift-jis" {
+				inStream := strings.NewReader(c.RawHTML)
+				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.ShiftJIS.NewDecoder()))
+				list := make([]string, 0)
+				for scanner.Scan() {
+					list = append(list, scanner.Text())
+				}
+				if err := scanner.Err(); err != nil {
+					return nil, err
+				}
+				c.RawHTML = strings.Join(list, "")
+				reader = strings.NewReader(c.RawHTML)
+				document, err = goquery.NewDocumentFromReader(reader)
+			}
 
-			if cs != "utf-8" {
+			/*if cs != "utf-8" {
 				r, err1 := charset.NewReader(cs, strings.NewReader(c.RawHTML))
 				if err1 != nil {
 					// On error, skip the read
@@ -76,7 +106,7 @@ func (c Crawler) Crawl() (*Article, error) {
 				}
 				reader = strings.NewReader(c.RawHTML)
 				document, err = goquery.NewDocumentFromReader(reader)
-			}
+			}*/
 		}
 	}
 
@@ -115,7 +145,6 @@ func (c Crawler) Crawl() (*Article, error) {
 	article.TopNode = extractor.calculateBestNode(article)
 	if article.TopNode != nil {
 		article.TopNode = extractor.postCleanup(article.TopNode)
-
 		outputFormatter := new(outputFormatter)
 		article.CleanedText, article.Links = outputFormatter.getFormattedText(article)
 

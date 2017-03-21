@@ -2,7 +2,7 @@ package goose
 
 import (
 	"container/list"
-	"github.com/advancedlogic/goquery"
+	"github.com/kenmazsyma/goquery"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 	"gopkg.in/fatih/set.v0"
@@ -292,10 +292,13 @@ func (extr *ContentExtractor) calculateBestNode(article *Article) *goquery.Selec
 	parentNodes := set.New()
 	nodesWithText := list.New()
 	for _, node := range nodesToCheck {
-		textNode := node.Text()
-		ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, textNode)
+		//textNode := node.Text()
+		//ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, textNode)
 		highLinkDensity := extr.isHighLinkDensity(node)
-		if ws.stopWordCount > 2 && !highLinkDensity {
+		//log.Printf("cnt:%d, flg:%d, textnode:%s\n\n\n\n\n", ws.stopWordCount, highLinkDensity, textNode)
+		//if ws.stopWordCount > 2 && !highLinkDensity {
+
+		if !highLinkDensity {
 			nodesWithText.PushBack(node)
 		}
 	}
@@ -332,8 +335,8 @@ func (extr *ContentExtractor) calculateBestNode(article *Article) *goquery.Selec
 			log.Printf("Location Boost Score %1.5f on iteration %d id='%s' class='%s'\n", boostScore, i, extr.config.parser.name("id", node), extr.config.parser.name("class", node))
 		}
 		textNode := node.Text()
-		ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, textNode)
-		upScore := ws.stopWordCount + int(boostScore)
+		// ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, textNode)
+		upScore := /*ws.stopWordCount*/ len(textNode) + int(boostScore)
 		parentNode := node.Parent()
 		extr.updateScore(parentNode, upScore)
 		extr.updateNodeCount(parentNode, 1)
@@ -360,6 +363,7 @@ func (extr *ContentExtractor) calculateBestNode(article *Article) *goquery.Selec
 			log.Printf("ParentNode: score=%s nodeCount=%s id='%s' class='%s'\n", extr.config.parser.name("gravityScore", e), extr.config.parser.name("gravityNodes", e), extr.config.parser.name("id", e), extr.config.parser.name("class", e))
 		}
 		score := extr.getScore(e)
+		//log.Printf("===============\n%d:%d:\n============\n%s\n\n", topNodeScore, score, e.Text())
 		if score >= topNodeScore {
 			topNode = e
 			topNodeScore = score
@@ -436,8 +440,8 @@ func (extr *ContentExtractor) isBoostable(node *goquery.Selection) bool {
 			}
 
 			paraText := node.Text()
-			ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, paraText)
-			if ws.stopWordCount > 5 {
+			//ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, paraText)
+			if /*ws.stopWordCount > 5*/ len(paraText) > 20 {
 				if extr.config.debug {
 					log.Println("We're gonna boost this node, seems content")
 				}
@@ -475,19 +479,21 @@ func (extr *ContentExtractor) isHighLinkDensity(node *goquery.Selection) bool {
 		return false
 	}
 	text := node.Text()
-	words := strings.Split(text, " ")
-	nwords := len(words)
+	//words := strings.Split(text, " ")
+	//nwords := len(words)
+	nwords := len(text)
 	var sb []string
 	links.Each(func(i int, s *goquery.Selection) {
 		linkText := s.Text()
 		sb = append(sb, linkText)
 	})
 	linkText := strings.Join(sb, "")
-	linkWords := strings.Split(linkText, " ")
-	nlinkWords := len(linkWords)
-	nlinks := links.Size()
+	//linkWords := strings.Split(linkText, " ")
+	//nlinkWords := len(linkWords)
+	nlinkWords := len(linkText)
+	//nlinks := links.Size()
 	linkDivisor := float64(nlinkWords) / float64(nwords)
-	score := linkDivisor * float64(nlinks)
+	score := linkDivisor //* float64(nlinks)
 
 	if extr.config.debug {
 		logText := ""
@@ -498,10 +504,15 @@ func (extr *ContentExtractor) isHighLinkDensity(node *goquery.Selection) bool {
 		}
 		log.Printf("Calculated link density score as %1.5f for node %s\n", score, logText)
 	}
-	if score > 1.0 {
-		return true
+	//log.Printf("*******************\nlink:%d, words:%d, score:%f, text:%s\n\n", nlinkWords, nwords, score, node.Text())
+	//if score > 1.0 {
+	//	return true
+	//}
+	//return false
+	if score < 0.2 {
+		return false
 	}
-	return false
+	return true
 }
 
 func (extr *ContentExtractor) isTableAndNoParaExist(selection *goquery.Selection) bool {

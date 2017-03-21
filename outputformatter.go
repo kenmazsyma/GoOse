@@ -1,7 +1,7 @@
 package goose
 
 import (
-	"github.com/advancedlogic/goquery"
+	"github.com/kenmazsyma/goquery"
 	"golang.org/x/net/html"
 	"regexp"
 	"strconv"
@@ -65,7 +65,7 @@ func (formatter *outputFormatter) linksToText() []string {
 		imgs := a.Find("img")
 		if imgs.Length() == 0 {
 			node := a.Get(0)
-			node.Data = a.Text()
+			node.Data = ""
 			node.Type = html.TextNode
 			// save a list of URLs
 			url, _ := a.Attr("href")
@@ -151,8 +151,8 @@ func (formatter *outputFormatter) removeParagraphsWithFewWords() {
 	}
 	allNodes := formatter.topNode.Children()
 	allNodes.Each(func(i int, s *goquery.Selection) {
-		sw := formatter.config.stopWords.stopWordsCount(language, s.Text())
-		if sw.wordCount < 5 && s.Find("object").Length() == 0 && s.Find("em").Length() == 0 {
+		//sw := formatter.config.stopWords.stopWordsCount(language, s.Text())
+		if len(s.Text()) < 10 /*sw.wordCount < 5*/ && s.Find("object").Length() == 0 && s.Find("em").Length() == 0 {
 			node := s.Get(0)
 			node.Parent.RemoveChild(node)
 		}
