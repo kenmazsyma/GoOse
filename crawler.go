@@ -7,6 +7,7 @@ import (
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
@@ -66,7 +67,8 @@ func (c Crawler) Crawl() (*Article, error) {
 		if strings.HasPrefix(attr, "text/html;charset=") {
 			cs := strings.TrimPrefix(attr, "text/html;charset=")
 			cs = strings.ToLower(cs)
-			if cs == "euc-jp" {
+			log.Println(cs)
+			if cs == "euc-jp" || cs == "euc_jp" {
 				inStream := strings.NewReader(c.RawHTML)
 				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.EUCJP.NewDecoder()))
 				list := make([]string, 0)
@@ -80,7 +82,7 @@ func (c Crawler) Crawl() (*Article, error) {
 				reader = strings.NewReader(c.RawHTML)
 				document, err = goquery.NewDocumentFromReader(reader)
 			}
-			if cs == "shift-jis" {
+			if cs == "shift-jis" || cs == "shift_jis" || cs == "x-sjis" {
 				inStream := strings.NewReader(c.RawHTML)
 				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.ShiftJIS.NewDecoder()))
 				list := make([]string, 0)

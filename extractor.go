@@ -25,6 +25,7 @@ var dashSplitter = regexp.MustCompile(" - ")
 var arrowsSplitter = regexp.MustCompile("»")
 var colonSplitter = regexp.MustCompile(":")
 var spaceSplitter = regexp.MustCompile(" ")
+var nostSplitter = regexp.MustCompile("[ \r\n\t][ \r\n\t]*")
 
 var aRelTagSelector = "a[rel=tag]"
 var aHrefTagSelector = [...]string{"/tag/", "/tags/", "/topic/", "?keyword"}
@@ -312,6 +313,7 @@ func (extr *ContentExtractor) calculateBestNode(article *Article) *goquery.Selec
 
 	for n := nodesWithText.Front(); n != nil; n = n.Next() {
 		node := n.Value.(*goquery.Selection)
+		//log.Printf("&&&&&&\n%s\n&&&&&&&&&&&\n\n", node.Text())
 		boostScore := 0.0
 		if extr.isBoostable(node) {
 			if cnt >= 0 {
@@ -334,9 +336,10 @@ func (extr *ContentExtractor) calculateBestNode(article *Article) *goquery.Selec
 		if extr.config.debug {
 			log.Printf("Location Boost Score %1.5f on iteration %d id='%s' class='%s'\n", boostScore, i, extr.config.parser.name("id", node), extr.config.parser.name("class", node))
 		}
-		textNode := node.Text()
+		//textNode := node.Text()
 		// ws := extr.config.stopWords.stopWordsCount(extr.config.targetLanguage, textNode)
-		upScore := /*ws.stopWordCount*/ len(textNode) + int(boostScore)
+		//log.Printf("$$$$$$$$$$$$$$$$$$$$$$\n%d, %d\n$$$%s\n$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n\n", extr.calcScore(node), int(boostScore), nostSplitter.ReplaceAllString(node.Text(), ""))
+		upScore := /*ws.stopWordCount*/ extr.calcScore(node) + int(boostScore)
 		parentNode := node.Parent()
 		extr.updateScore(parentNode, upScore)
 		extr.updateNodeCount(parentNode, 1)
@@ -469,6 +472,30 @@ func (extr *ContentExtractor) nodesToCheck(doc *goquery.Document) []*goquery.Sel
 		}
 	}
 	return output
+}
+
+func (extr *ContentExtractor) calcScore(node *goquery.Selection) int {
+	links := node.Find("a")
+	text := node.Text()
+	text = nostSplitter.ReplaceAllString(text, "")
+	nwords := len(text)
+	nlinkWords := 0
+	//nn := nwords
+	//if nn > 50 {
+	//	nn = 50
+	//}
+	if links != nil && links.Size() > 0 {
+		var sb []string
+		links.Each(func(i int, s *goquery.Selection) {
+			linkText := s.Text()
+			sb = append(sb, linkText)
+		})
+		linkText := strings.Join(sb, "")
+		linkText = nostSplitter.ReplaceAllString(linkText, "")
+		nlinkWords = len(linkText)
+	}
+	//log.Printf("####\n%d, -%d, %s\n\n", (nwords - nlinkWords), nlinkWords, text[0:nn])
+	return nwords - nlinkWords*2
 }
 
 //checks the density of links within a node, is there not much text and most of it contains bad links?
