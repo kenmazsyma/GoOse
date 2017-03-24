@@ -110,6 +110,8 @@ func (c Crawler) Crawl() (*Article, error) {
 				document, err = goquery.NewDocumentFromReader(reader)
 			}*/
 		}
+	} else {
+		return nil, nil
 	}
 
 	if err != nil {
