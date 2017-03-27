@@ -68,7 +68,7 @@ func (c Crawler) Crawl() (*Article, error) {
 			cs := strings.TrimPrefix(attr, "text/html;charset=")
 			cs = strings.ToLower(cs)
 			fmt.Println(cs)
-			if cs == "euc-jp" || cs == "euc_jp" || cs == "eucjp-ms" {
+			if cs == "x-euc-jp" || cs == "euc-jp" || cs == "euc_jp" || cs == "eucjp-ms" {
 				inStream := strings.NewReader(c.RawHTML)
 				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.EUCJP.NewDecoder()))
 				list := make([]string, 0)
@@ -108,11 +108,11 @@ func (c Crawler) Crawl() (*Article, error) {
 				reader = strings.NewReader(c.RawHTML)
 				document, err = goquery.NewDocumentFromReader(reader)
 			} else if cs != "utf-8" {
-				return nil, nil
+				return article, nil
 			}
 		}
 	} else {
-		return nil, nil
+		return article, nil
 	}
 
 	if err != nil {
