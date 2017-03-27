@@ -4,10 +4,10 @@ import (
 	"github.com/kenmazsyma/goquery"
 	//"github.com/rogpeppe/go-charset/charset"
 	"bufio"
+	"fmt"
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"strings"
@@ -67,8 +67,8 @@ func (c Crawler) Crawl() (*Article, error) {
 		if strings.HasPrefix(attr, "text/html;charset=") {
 			cs := strings.TrimPrefix(attr, "text/html;charset=")
 			cs = strings.ToLower(cs)
-			log.Println(cs)
-			if cs == "euc-jp" || cs == "euc_jp" {
+			fmt.Println(cs)
+			if cs == "euc-jp" || cs == "euc_jp" || cs == "eucjp-ms" {
 				inStream := strings.NewReader(c.RawHTML)
 				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.EUCJP.NewDecoder()))
 				list := make([]string, 0)
@@ -81,8 +81,7 @@ func (c Crawler) Crawl() (*Article, error) {
 				c.RawHTML = strings.Join(list, "")
 				reader = strings.NewReader(c.RawHTML)
 				document, err = goquery.NewDocumentFromReader(reader)
-			}
-			if cs == "shift-jis" || cs == "shift_jis" || cs == "x-sjis" {
+			} else if cs == "shift-jis" || cs == "shift_jis" || cs == "x-sjis" || cs == "windows-31j" {
 				inStream := strings.NewReader(c.RawHTML)
 				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.ShiftJIS.NewDecoder()))
 				list := make([]string, 0)
@@ -95,20 +94,22 @@ func (c Crawler) Crawl() (*Article, error) {
 				c.RawHTML = strings.Join(list, "")
 				reader = strings.NewReader(c.RawHTML)
 				document, err = goquery.NewDocumentFromReader(reader)
-			}
-
-			/*if cs != "utf-8" {
-				r, err1 := charset.NewReader(cs, strings.NewReader(c.RawHTML))
-				if err1 != nil {
-					// On error, skip the read
-					c.RawHTML = ""
-				} else {
-					utf8, _ := ioutil.ReadAll(r)
-					c.RawHTML = string(utf8)
+			} else if cs == "iso-2022-jp" {
+				inStream := strings.NewReader(c.RawHTML)
+				scanner := bufio.NewScanner(transform.NewReader(inStream, japanese.ISO2022JP.NewDecoder()))
+				list := make([]string, 0)
+				for scanner.Scan() {
+					list = append(list, scanner.Text())
 				}
+				if err := scanner.Err(); err != nil {
+					return nil, err
+				}
+				c.RawHTML = strings.Join(list, "")
 				reader = strings.NewReader(c.RawHTML)
 				document, err = goquery.NewDocumentFromReader(reader)
-			}*/
+			} else if cs != "utf-8" {
+				return nil, nil
+			}
 		}
 	} else {
 		return nil, nil
